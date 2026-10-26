@@ -1,0 +1,12 @@
+# Grant the active seat user read access to input event nodes.
+#
+# This is the multi-device rule: it covers any keyboard, pointer, touchpad, or
+# gamepad, including devices plugged in later. It is only useful because this file
+# sorts before 73-seat-late.rules, which applies the uaccess ACL.
+#
+# Install with: sudo packaging/install-udev-rule.sh --generic
+SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_KEY}=="1", TAG+="uaccess"
+SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_KEYBOARD}=="1", TAG+="uaccess"
+SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_MOUSE}=="1", TAG+="uaccess"
+SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_TOUCHPAD}=="1", TAG+="uaccess"
+SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_JOYSTICK}=="1", TAG+="uaccess"

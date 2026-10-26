@@ -1,0 +1,20 @@
+# Keyboard Inspector — targeted read access for the URX75 Core75.
+#
+# This grants the logged-in seat user an ACL on the keyboard's evdev event
+# nodes. It does not grant access to every input device, does not use the
+# input group, and does not change the application's privileges.
+#
+# Review this file before installing it. The helper script backs up an
+# existing file and reloads udev. Never run the GUI as root.
+#
+# This file must sort before 73-seat-late.rules in /etc/udev/rules.d, because
+# that rule applies the uaccess ACL. A 99- prefix is too late: the tag would be
+# added after the ACL step and the event node would stay root:input only.
+#
+# For a different keyboard, replace the vendor/product IDs. Find them with:
+#   udevadm info --query=property --name=/dev/input/eventN | grep ID_VENDOR_ID
+#   udevadm info --query=property --name=/dev/input/eventN | grep ID_MODEL_ID
+
+SUBSYSTEM=="input", KERNEL=="event*", \
+  ATTRS{id/vendor}=="36b0", ATTRS{id/product}=="3002", \
+  ENV{ID_INPUT_KEYBOARD}=="1", MODE="0660", TAG+="uaccess"

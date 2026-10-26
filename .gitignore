@@ -1,0 +1,13 @@
+# Build trees
+build/
+cmake-build-*/
+
+# Local session artifacts (captured recordings contain personal typing data)
+*.kbi.kbi-local
+recording*.kbi
+
+# Editor / tool local state
+.kilo/
+.idea/
+.vscode/
+*.swp

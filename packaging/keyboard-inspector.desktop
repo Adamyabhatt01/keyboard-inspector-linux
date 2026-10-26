@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Keyboard Inspector
+GenericName=Keyboard Timing Inspector
+Comment=Measure keyboard event timing and estimate the report rate
+Exec=keyboard-inspector %f
+TryExec=keyboard-inspector
+Icon=keyboard-inspector
+Terminal=false
+Categories=Utility;
+Keywords=keyboard;input;polling;rate;timing;evdev;usb;
+StartupNotify=true

@@ -1,0 +1,76 @@
+# Maintainer: Adamya Bhatt
+# Keyboard Inspector for Linux — native C++/Qt6 port of mat1jaczyyy's
+# Keyboard Inspector (Windows). Measures input-event timing and estimates
+# the report rate; never measures or claims USB descriptor intervals.
+#
+# Build from an isolated copy so a src/ work directory cannot collide with
+# the project source tree:
+#   rm -rf /tmp/ki-pkg && cp -r . /tmp/ki-pkg && rm -rf /tmp/ki-pkg/build
+#   cd /tmp/ki-pkg/packaging && makepkg -f --nodeps
+
+pkgname=keyboard-inspector-linux
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Measure keyboard event timing and estimate the report rate (Linux port of Keyboard Inspector)"
+arch=('x86_64')
+url="https://github.com/Adamyabhatt01/keyboard-inspector-linux"
+license=('GPL3')
+# kissfft is optional: without it analysis falls back to a naive O(n^2) DFT
+# (a startup warning is logged). Keep it in depends for full-speed analysis.
+depends=('qt6-base' 'qt6-5compat' 'libevdev' 'kissfft' 'gcc-libs' 'glibc')
+makedepends=('cmake' 'catch2' 'ninja')
+optdepends=('polkit: uaccess ACL handling for the targeted udev rule')
+provides=('keyboard-inspector')
+conflicts=('keyboard-inspector')
+source=()
+noextract=()
+sha256sums=()
+
+prepare() {
+    # This PKGBUILD builds the sibling source tree (its parent directory).
+    # Assemble $srcdir from the checkout without recursing into packaging/.
+    rm -rf "$srcdir"
+    mkdir -p "$srcdir"
+    for item in CMakeLists.txt src tests docs LICENSE NOTICE README.md; do
+        if [ ! -e "$startdir/../$item" ]; then
+            error "Missing $item — run makepkg from the port's packaging/ directory."
+            return 1
+        fi
+        cp -a "$startdir/../$item" "$srcdir/"
+    done
+}
+
+build() {
+    cmake -B build -S "$srcdir" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -G Ninja
+    cmake --build build
+}
+
+check() {
+    ./build/bin/keyboard-inspector-tests
+    QT_QPA_PLATFORM=offscreen ./build/bin/keyboard-inspector-ui-tests
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build
+
+    # Desktop entry and icon (packaging assets come from this directory).
+    install -Dm644 "$startdir/keyboard-inspector.desktop" \
+        "$pkgdir/usr/share/applications/keyboard-inspector.desktop"
+    install -Dm644 "$startdir/keyboard-inspector.png" \
+        "$pkgdir/usr/share/icons/hicolor/256x256/apps/keyboard-inspector.png"
+
+    # NOTE: the udev rule is NOT installed automatically. It grants read
+    # access to specific keyboard event nodes and must be reviewed first:
+    #   packaging/install-udev-rule.sh
+    install -Dm644 "$startdir/71-keyboard-inspector.rules" \
+        "$pkgdir/usr/share/doc/$pkgname/71-keyboard-inspector.rules.example"
+    install -Dm644 "$startdir/71-keyboard-inspector-generic.rules" \
+        "$pkgdir/usr/share/doc/$pkgname/71-keyboard-inspector-generic.rules.example"
+    install -Dm644 "$srcdir/README.md" \
+        "$pkgdir/usr/share/doc/$pkgname/README.md"
+    install -Dm644 "$srcdir/LICENSE" \
+        "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
