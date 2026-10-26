@@ -30,6 +30,14 @@ jobs:
       - name: Run tests (core + UI smoke)
         run: ctest --test-dir build --output-on-failure
 
+      # TEMPORARY debug: backtrace for the offscreen UI segfault on ubuntu Qt.
+      - name: Debug UI test under gdb
+        if: always()
+        run: |
+          sudo apt-get install -y --no-install-recommends gdb
+          QT_QPA_PLATFORM=offscreen gdb -batch -ex run -ex bt -ex "info threads" \
+            --args ./build/bin/keyboard-inspector-ui-tests 2>&1 | tail -60
+
       - name: Offscreen screenshot smoke test
         run: |
           ./build/bin/keyboard-inspector --screenshot /tmp/ki.png
