@@ -118,7 +118,8 @@ unprivileged; choose one of:
   keyboards/mice/gamepads with their USB ids, and (after you choose) writes a
   targeted `uaccess` rule via sudo. `--scan` lists only. A handwritten rule for a
   specific device also works: `packaging/71-keyboard-inspector.rules` shows the
-  URX75 Core75 (`36b0:3002`) as the example. The rule must sort before
+  file format — replace the vendor/product ids with your device's (the script
+  prints how to find them). The rule must sort before
   `73-seat-late.rules`; a re-plug (or `udevadm trigger`) is needed after install.
 - **Generic rule (simplest, still unprivileged GUI)** —
   `sudo packaging/install-udev-rule.sh --generic` grants the logged-in seat user
@@ -132,10 +133,11 @@ locked, and explained in the permission banner.
 ## USB polling interval — what is measured and what is not
 
 The Capture menu can show the device's USB descriptor data (vendor/product, speed,
-interrupt-IN endpoint, `bInterval`, `wMaxPacketSize`). For the URX75 Core75 this reads
-full-speed USB, HID boot keyboard, endpoint `0x81`, `bInterval=1` ms, 8-byte reports —
-a **configured maximum of 1000 Hz, not a measurement**. The measured rate in the top bar
-comes only from captured event timing. See `docs/MEASUREMENT_LIMITS.md`.
+interrupt-IN endpoint, `bInterval`, `wMaxPacketSize`). For a typical full-speed
+HID keyboard with `bInterval=1` ms this is a **configured maximum of 1000 Hz,
+not a measurement**, and the actual rate can be lower (some devices report every
+n-th frame). The measured rate in the top bar comes only from captured event
+timing. See `docs/MEASUREMENT_LIMITS.md`.
 
 ## Package
 
