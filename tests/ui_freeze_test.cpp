@@ -10,9 +10,7 @@
 #include <QToolButton>
 #include <QColor>
 
-#include <memory>
 #include <vector>
-
 #include "../src/keyboard_inspector/ui/chart.h"
 #include "../src/keyboard_inspector/ui/main_window.h"
 
@@ -24,12 +22,15 @@ QApplication* ensure_app() {
     static int argc = 1;
     static char name[] = "keyboard-inspector-ui-tests";
     static char* argv[] = {name, nullptr};
-    static std::unique_ptr<QApplication> app;
+    // Intentionally leaked: destroying the QApplication during static
+    // destruction after exit() segfaults under some platform plugins
+    // (observed with Qt 6.4.2's offscreen plugin).
+    static QApplication* app = nullptr;
     if (!app) {
         qputenv("QT_QPA_PLATFORM", "offscreen");
-        app = std::make_unique<QApplication>(argc, argv);
+        app = new QApplication(argc, argv);
     }
-    return app.get();
+    return app;
 }
 
 QCheckBox* find_checkbox(QWidget& parent, const QString& text) {
