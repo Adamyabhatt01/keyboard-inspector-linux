@@ -63,10 +63,32 @@ need_cmd() { have "$1" || missing+=("$1"); }
 # ---------------------------------------------------------------- dependencies
 banner "Checking dependencies (build deps: cmake, git, compiler, libevdev, Qt6)"
 
+# Package set per detected package manager. Every listed package is included
+# even if some are present; managers no-op already-installed ones
+# (apt needs --no-install-recommends to keep the payload lean).
+pkg_manager=""
+install_set=""
+if have pacman; then
+    pkg_manager="pacman"
+    install_set="cmake git gcc make qt6-base libevdev"
+elif have apt-get; then
+    pkg_manager="apt"
+    install_set="cmake git build-essential qt6-base-dev libevdev-dev"
+elif have dnf; then
+    pkg_manager="dnf"
+    install_set="cmake git gcc-c++ make qt6-qtbase-devel libevdev-devel"
+elif have zypper; then
+    pkg_manager="zypper"
+    install_set="cmake git gcc-c++ make qt6-base-devel libevdev-devel"
+elif have apk; then
+    pkg_manager="apk"
+    install_set="cmake git g++ make qt6-qtbase-dev libevdev-dev"
+fi
+
 need_cmd cmake
 need_cmd git          # CMake FetchContent vendors kissfft + Catch2 via git
 # A C++ compiler: c++, g++, clang++ in that order.
-have c++ || have g++ || have clang++ || missing+=(c++)
+have c++ || have g++ || have clang++ || missing+=("C++ compiler (c++/g++/clang++)")
 have pkg-config || missing+=(pkg-config)
 
 qt_ok=0 evdev_ok=0
@@ -75,25 +97,70 @@ if have pkg-config; then
     pkg-config --exists libevdev && evdev_ok=1 || missing+=("libevdev development files (pkg-config libevdev not found)")
 fi
 
-cmake_meta_ok=0
-if have cmake; then
-    cmake_meta_ok=1
+resolve_deps() {
+    missing=()
+    need_cmd cmake
+    need_cmd git
+    have c++ || have g++ || have clang++ || missing+=("C++ compiler")
+    have pkg-config || missing+=(pkg-config)
+    if have pkg-config; then
+        pkg-config --exists Qt6Core || missing+=("Qt6 development files")
+        pkg-config --exists libevdev || missing+=("libevdev development files")
+    else
+        missing+=(pkg-config)
+    fi
+}
+
+if [[ ${#missing[@]} -gt 0 && -n ${install_set} ]]; then
+    echo
+    echo "Missing dependencies detected on this system:"
+    printf '  - %s\n' "${missing[@]}"
+    if [[ -t 0 ]]; then
+        echo
+        echo "Packaging system detected: ${pkg_manager}"
+        read -rp "Install them automatically with sudo now? [y/N]: " yn
+        case ${yn:-n} in
+            [yY]|[yY][eE][sS])
+                echo
+                echo "Installing ${install_set} (the password prompt covers only these system packages)..."
+                case ${pkg_manager} in
+                    pacman) sudo -- pacman -Syu --needed ${install_set} ;;
+                    apt)    sudo -- apt-get update; sudo -- apt-get install -y --no-install-recommends ${install_set} ;;
+                    dnf)    sudo -- dnf install -y ${install_set} ;;
+                    zypper) sudo -- zypper install -y ${install_set} ;;
+                    apk)    sudo -- apk add ${install_set} ;;
+                esac
+                resolve_deps
+                ;;
+            *)
+                echo "Declined — manual instructions below."
+                ;;
+        esac
+    else
+        echo "No terminal available for the sudo prompt; manual instructions below."
+    fi
 fi
 
 if [[ ${#missing[@]} -gt 0 ]]; then
     echo
-    echo "Missing dependencies:"
+    echo "Dependencies still missing:"
     printf '  - %s\n' "${missing[@]}"
-    echo
-    if have pacman; then
-        echo "Arch:        sudo pacman -S --needed cmake git gcc make qt6-base libevdev"
-    elif have apt-get; then
-        echo "Debian/Ubuntu: sudo apt-get install -y cmake git build-essential qt6-base-dev libevdev-dev"
-    elif have dnf; then
-        echo "Fedora:      sudo dnf install -y cmake git gcc-c++ make qt6-qtbase-devel libevdev-devel"
-    elif have zypper; then
-        echo "openSUSE:    sudo zypper install -y cmake git gcc-c++ make qt6-base-devel libevdev-devel"
+    if [[ -n ${pkg_manager} ]]; then
+        echo
+        echo "Install manually:"
+        case ${pkg_manager} in
+            pacman) echo "  sudo pacman -S --needed ${install_set}" ;;
+            apt)    echo "  sudo apt-get install -y ${install_set}" ;;
+            dnf)    echo "  sudo dnf install -y ${install_set}" ;;
+            zypper) echo "  sudo zypper install -y ${install_set}" ;;
+            apk)    echo "  sudo apk add ${install_set}" ;;
+        esac
+    else
+        echo
+        echo "No supported package manager found; install cmake, git, a C++20 compiler,"
+        echo "Qt 6 development files (Core/Widgets/Gui/Concurrent/Network) and libevdev manually."
     fi
+    echo
     echo "Re-run ./setup.sh after installing them."
     exit 1
 fi

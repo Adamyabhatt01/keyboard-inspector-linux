@@ -46,14 +46,20 @@ Linux-specific capture through the kernel's evdev interface.
 
 ## Installing
 
-One-step setup (checks dependencies with install hints, builds, runs the tests,
-installs, then optionally asks for the device-access rule):
+One-step setup:
 
 ```bash
 ./setup.sh              # install to ~/.local (no root involved)
 ./setup.sh --system     # install to /usr/local (sudo only for the install step)
 ./setup.sh --no-tests --skip-udev   # skip steps if you want
 ```
+
+`setup.sh` detects your system's package manager (pacman / apt / dnf / zypper /
+apk), checks every build dependency, and offers to install what is missing via
+`sudo` automatically — the password prompt covers only the system packages.
+It then builds, runs the test suites, installs the binary plus the desktop
+entry, icon and documentation to their standard locations, and finally offers
+to set up device access (generic rule or auto-scan targeted rule).
 
 Ready-made portable builds for tagged versions are attached to the
 [releases page](https://github.com/Adamyabhatt01/keyboard-inspector-linux/releases)

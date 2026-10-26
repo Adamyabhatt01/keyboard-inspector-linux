@@ -201,9 +201,11 @@ milestones below describe the C++ port only.
   published as `keyboard-inspector-linux` (github.com/Adamyabhatt01/keyboard-inspector-linux),
   standalone repo containing only this port (58 files; recordings and build excluded).
   New distribution paths so users can install and set up automatically:
-  - `setup.sh` (repo root): dependency check with distro-specific install hints,
-    build, both Catch2 suites via ctest, install (default `~/.local`, `--system`
-    for `/usr/local`, or `--prefix`), desktop entry + icon + docs payload, then an
+  - `setup.sh` (repo root): dependency check per detected package manager
+    (pacman/apt/dnf/zypper/apk) with an interactive sudo auto-install of the
+    missing packages (password covers only the system packages), build, both
+    Catch2 suites via ctest, install (default `~/.local`, `--system` for
+    `/usr/local`, or `--prefix`), desktop entry + icon + docs payload, then an
     optional device-access step (generic / auto-scan targeted / skip).
     Evidence: full local run → both suites pass, install payload verified,
     installed binary answers `--version` and lists devices.
