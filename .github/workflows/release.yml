@@ -1,0 +1,107 @@
+name: Release
+
+# Tag a commit (v0.1.0 style) to build, test and publish a portable tarball:
+#   git tag v0.1.0 && git push origin v0.1.0
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, test, publish release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build git g++ \
+            qt6-base-dev libevdev-dev fonts-dejavu-core
+
+      - name: Configure and build
+        run: |
+          cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -G Ninja
+          cmake --build build -j"$(nproc)"
+
+      - name: Run tests (blocking quality gate)
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Stage portable install tree
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          staging="keyboard-inspector-${tag}-x86_64"
+          cmake --install build --prefix "${staging}"
+
+          # Desktop integration, docs and the udev rule helper.
+          install -Dm644 packaging/keyboard-inspector.desktop \
+            "${staging}/share/applications/keyboard-inspector.desktop"
+          install -Dm644 packaging/keyboard-inspector.png \
+            "${staging}/share/icons/hicolor/256x256/apps/keyboard-inspector.png"
+          install -Dm644 README.md "${staging}/share/doc/keyboard-inspector/README.md"
+          install -Dm644 LICENSE "${staging}/share/doc/keyboard-inspector/LICENSE"
+          install -Dm644 NOTICE "${staging}/share/doc/keyboard-inspector/NOTICE"
+          install -Dm644 packaging/71-keyboard-inspector.rules \
+            "${staging}/share/doc/keyboard-inspector/71-keyboard-inspector.rules.example"
+          install -Dm644 packaging/71-keyboard-inspector-generic.rules \
+            "${staging}/share/doc/keyboard-inspector/71-keyboard-inspector-generic.rules.example"
+          install -Dm755 packaging/install-udev-rule.sh \
+            "${staging}/share/doc/keyboard-inspector/install-udev-rule.sh"
+
+          # Dynamic link note: this tarball is built on ubuntu-24.04 (glibc 2.39).
+          # It needs Qt 6 and libevdev present on the system, or run setup.sh
+          # from the source tree, which checks everything for you.
+          {
+            printf '%s\n' \
+              "Portable build — how to run" \
+              "---------------------------" \
+              "Run:   bin/keyboard-inspector" \
+              "Desktop entry and icon are under share/ (copy to ~/.local/share/...)." \
+              "" \
+              "Requirements: Qt 6 (Core, Widgets, Gui, Concurrent, Network) and" \
+              "libevdev must be installed on your system; kissfft is vendored in." \
+              "This build targets x86_64 and glibc >= 2.39 (built on ubuntu-24.04)." \
+              "" \
+              "Device access: the app reads /dev/input/event* unprivileged. Grant" \
+              "access once (requires sudo), then replug the device:" \
+              "  sudo share/doc/keyboard-inspector/install-udev-rule.sh --generic" \
+              "  # or pick one connected device:" \
+              "  share/doc/keyboard-inspector/install-udev-rule.sh --auto" \
+              "" \
+              "Verify: bin/keyboard-inspector --list-devices"
+          } > "${staging}/share/doc/keyboard-inspector/INSTALL.txt"
+
+          tar -czf "${staging}.tar.gz" "${staging}"
+          sha256sum "${staging}.tar.gz" > "${staging}.tar.gz.sha256"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          staging="keyboard-inspector-${tag}-x86_64"
+          notes_file="$(mktemp)"
+          {
+            printf '%s\n' \
+              "Portable x86_64 build of Keyboard Inspector for Linux." \
+              "" \
+              "**Easiest way to run**: extract, then" \
+              "\`sudo share/doc/keyboard-inspector/install-udev-rule.sh --generic\`" \
+              "and start \`bin/keyboard-inspector\`. See" \
+              "\`share/doc/keyboard-inspector/INSTALL.txt\` for details." \
+              "" \
+              "Requirements: Qt 6 and libevdev on your system (the build links" \
+              "dynamically); glibc >= 2.39. Otherwise prefer compiling via" \
+              "\`./setup.sh\` from the source tree — it checks dependencies for you." \
+              "Arch users can build \`packaging/PKGBUILD\` directly."
+          } > "${notes_file}"
+          gh release create "${tag}" \
+            --title "Keyboard Inspector Linux ${tag}" \
+            --notes-file "${notes_file}" \
+            "${staging}.tar.gz" "${staging}.tar.gz.sha256"

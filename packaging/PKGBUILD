@@ -17,7 +17,7 @@ url="https://github.com/Adamyabhatt01/keyboard-inspector-linux"
 license=('GPL3')
 # kissfft is optional: without it analysis falls back to a naive O(n^2) DFT
 # (a startup warning is logged). Keep it in depends for full-speed analysis.
-depends=('qt6-base' 'qt6-5compat' 'libevdev' 'kissfft' 'gcc-libs' 'glibc')
+depends=('qt6-base' 'libevdev' 'kissfft' 'gcc-libs' 'glibc')
 makedepends=('cmake' 'catch2' 'ninja')
 optdepends=('polkit: uaccess ACL handling for the targeted udev rule')
 provides=('keyboard-inspector')

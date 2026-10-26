@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build and test (ubuntu-24.04, Qt 6)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build git g++ \
+            qt6-base-dev libevdev-dev fonts-dejavu-core
+
+      - name: Configure
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -G Ninja
+
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+
+      - name: Run tests (core + UI smoke)
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Offscreen screenshot smoke test
+        run: |
+          ./build/bin/keyboard-inspector --screenshot /tmp/ki.png
+          test -s /tmp/ki.png && echo "screenshot rendered: $(du -h /tmp/ki.png | cut -f1)"

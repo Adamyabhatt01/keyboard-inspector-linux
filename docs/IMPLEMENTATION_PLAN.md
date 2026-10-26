@@ -197,6 +197,38 @@ milestones below describe the C++ port only.
   `makepkg -f --nodeps` from an isolated copy (`/tmp/opencode/pkgtest/linux/packaging`)
   succeeded, running both test suites in `check()` and producing a clean package payload
   (binary, desktop entry, icon, udev-rule examples, license).
+- **2026-10-26 (publishing: repo, setup.sh, auto-scan rule installer, CI)** —
+  published as `keyboard-inspector-linux` (github.com/Adamyabhatt01/keyboard-inspector-linux),
+  standalone repo containing only this port (58 files; recordings and build excluded).
+  New distribution paths so users can install and set up automatically:
+  - `setup.sh` (repo root): dependency check with distro-specific install hints,
+    build, both Catch2 suites via ctest, install (default `~/.local`, `--system`
+    for `/usr/local`, or `--prefix`), desktop entry + icon + docs payload, then an
+    optional device-access step (generic / auto-scan targeted / skip).
+    Evidence: full local run → both suites pass, install payload verified,
+    installed binary answers `--version` and lists devices.
+  - `packaging/install-udev-rule.sh --auto/--scan`: unprivileged sysfs + udevadm
+    scan of capturable devices (keyboard/mouse/gamepad/joystick/touchpad), picks
+    one connected device, writes a targeted VID/PID uaccess rule via sudo
+    re-exec (`--apply-device`), backing up prior rules; `--generic/--targeted`
+    behavior unchanged.
+    Evidence: live scan on this machine lists the URX75 (36b0:3002), 2.4G mouse
+    (1ea7:0064), and flags PS/2 devices as "no USB ids"; syntax-checked; the
+    apply path is a direct rule write + backup + reload, reviewed by hand.
+  - CI (`.github/workflows/ci.yml`): builds on ubuntu-24.04 (Qt 6 dev packages,
+    libevdev; kissfft + Catch2 vendored by FetchContent), runs ctest and an
+    offscreen screenshot smoke test on every push/PR.
+  - Releases (`.github/workflows/release.yml`): on `v*` tags, builds, runs tests
+    as a quality gate, stages a portable install tree (bin, desktop, icon, docs,
+    udev rule helper + INSTALL.txt), publishes a tarball + sha256 to a GitHub
+    release.
+  - `README.md`: install section (setup.sh, releases, PKGBUILD), CI badge,
+    updated device-access options including `--auto`; `PKGBUILD` drops unused
+    `qt6-5compat`.
+  - Known limitation: the `--apply-device` sudo path and the release workflow
+    ran without a live demonstration here (no automated sudo context); both are
+    straightforward, must run under sudo, and the release flow executes only on
+    tag push.
 - **2026-10-26** — Batches C/D/E of the Windows-parity pass:
   - URL import + download flow, TETR.IO import (picker + disclaimer), Help menu
     (Documentation/Updates/Discord/Donate/About), update check with top-bar notification,

@@ -1,5 +1,7 @@
 # Keyboard Inspector for Linux
 
+[![CI](https://github.com/Adamyabhatt01/keyboard-inspector-linux/actions/workflows/ci.yml/badge.svg)](https://github.com/Adamyabhatt01/keyboard-inspector-linux/actions/workflows/ci.yml)
+
 A native Linux port of [Keyboard Inspector](https://github.com/mat1jaczyyy/Keyboard-Inspector)
 (Windows, C#/.NET): record keyboard and input events, build the same three timing
 histograms, run the same FFT / low-cut / HPS pipeline, and read a confidence-gated
@@ -42,12 +44,29 @@ Linux-specific capture through the kernel's evdev interface.
   splitting, double-click spotlight into the top panel, timeline with row drag-reorder,
   context menu, and drag-and-drop file open.
 
+## Installing
+
+One-step setup (checks dependencies with install hints, builds, runs the tests,
+installs, then optionally asks for the device-access rule):
+
+```bash
+./setup.sh              # install to ~/.local (no root involved)
+./setup.sh --system     # install to /usr/local (sudo only for the install step)
+./setup.sh --no-tests --skip-udev   # skip steps if you want
+```
+
+Ready-made portable builds for tagged versions are attached to the
+[releases page](https://github.com/Adamyabhatt01/keyboard-inspector-linux/releases)
+(extract, run `bin/keyboard-inspector`; see `INSTALL.txt` inside).
+Arch users can alternatively build `packaging/PKGBUILD`.
+
 ## Building
 
-Arch Linux (tested): Qt 6 (Core, Widgets, Gui, Concurrent, Network), libevdev,
-CMake ≥ 3.24, and a C++20 compiler. `kissfft` is optional — without it the FFT falls
-back to a built-in radix-2/Bluestein transform (O(n log n), still fast on long
-recordings; the app logs a warning at startup).
+Manually, without the helper script: Qt 6 (Core, Widgets, Gui, Concurrent,
+Network), libevdev, CMake, and a C++20 compiler. `kissfft` is optional — without
+it the FFT falls back to a built-in radix-2/Bluestein transform (O(n log n),
+still fast on long recordings; the app logs a warning at startup). `kissfft`
+and Catch2 are vendored automatically via CMake FetchContent.
 
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -88,10 +107,16 @@ Logs go to `~/.local/state/keyboard-inspector/keyboard-inspector.log` by default
 `/dev/input/event*` is `root:input 0660` by default. The application must run
 unprivileged; choose one of:
 
-- **Targeted udev rule (recommended)** — `packaging/install-udev-rule.sh` installs
-  `71-keyboard-inspector.rules`, granting the logged-in seat user an ACL only on the
-  matching keyboard's event nodes (`uaccess`). The rule must sort before
+- **Targeted udev rule (recommended)** — pick one connected device and grant just
+  that one: `packaging/install-udev-rule.sh --auto` scans without root, lists
+  keyboards/mice/gamepads with their USB ids, and (after you choose) writes a
+  targeted `uaccess` rule via sudo. `--scan` lists only. A handwritten rule for a
+  specific device also works: `packaging/71-keyboard-inspector.rules` shows the
+  URX75 Core75 (`36b0:3002`) as the example. The rule must sort before
   `73-seat-late.rules`; a re-plug (or `udevadm trigger`) is needed after install.
+- **Generic rule (simplest, still unprivileged GUI)** —
+  `sudo packaging/install-udev-rule.sh --generic` grants the logged-in seat user
+  access to every input device's event nodes, including devices plugged in later.
 - **`input` group (broad)** — `usermod -aG input $USER` grants read access to every input
   device. Simpler but wider than needed.
 
