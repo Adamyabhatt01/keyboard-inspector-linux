@@ -219,7 +219,17 @@ milestones below describe the C++ port only.
     apply path is a direct rule write + backup + reload, reviewed by hand.
   - CI (`.github/workflows/ci.yml`): builds on ubuntu-24.04 (Qt 6 dev packages,
     libevdev; kissfft + Catch2 vendored by FetchContent), runs ctest and an
-    offscreen screenshot smoke test on every push/PR.
+    offscreen screenshot smoke test on every push/PR. Two issues fixed against
+    the runner environment (Arch→ubuntu portability of the test hosts):
+    (1) the UI suite segfaulted after *all tests passed* — the static
+    `QApplication` destruction at `exit()` crashes in
+    `QApplication::~QApplication()` under Qt 6.4.2's offscreen plugin (gdb
+    backtrace: `libc exit → ~QApplication → ~?Widgets`); fixed by leaking the
+    app instance in `tests/ui_freeze_test.cpp` (standard Qt test host pattern,
+    no behavioral change — 22/3 cases identical locally); (2) the screenshot
+    smoke step needs `QT_QPA_PLATFORM=offscreen` set explicitly on a bare
+    runner. Evidence: CI run 40295955777 ended green on commit
+    e298c92 (tests pass, screenshot renders); local suites unchanged.
   - Releases (`.github/workflows/release.yml`): on `v*` tags, builds, runs tests
     as a quality gate, stages a portable install tree (bin, desktop, icon, docs,
     udev rule helper + INSTALL.txt), publishes a tarball + sha256 to a GitHub
