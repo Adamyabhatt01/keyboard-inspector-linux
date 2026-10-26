@@ -32,5 +32,5 @@ jobs:
 
       - name: Offscreen screenshot smoke test
         run: |
-          ./build/bin/keyboard-inspector --screenshot /tmp/ki.png
+          QT_QPA_PLATFORM=offscreen ./build/bin/keyboard-inspector --screenshot /tmp/ki.png
           test -s /tmp/ki.png && echo "screenshot rendered: $(du -h /tmp/ki.png | cut -f1)"
